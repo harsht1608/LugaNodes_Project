@@ -1,0 +1,60 @@
+- name: Install Prometheus in static mode
+  hosts: all
+  become: true
+
+  vars:
+    prometheus_version: "2.53.2"  # Specify the Prometheus version
+    prometheus_install_dir: "/opt/prometheus"
+    prometheus_service_file: "/etc/systemd/system/prometheus.service"
+
+  tasks:
+    - name: Create Prometheus installation directory
+      ansible.builtin.file:
+        path: "{{ prometheus_install_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Download Prometheus binary
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+
+    - name: Extract Prometheus binary
+      ansible.builtin.unarchive:
+        src: "/tmp/prometheus-{{ prometheus_version }}.tar.gz"
+        dest: "{{ prometheus_install_dir }}"
+        remote_src: yes
+
+    - name: Create Prometheus service file
+      ansible.builtin.copy:
+        dest: "{{ prometheus_service_file }}"
+        content: |
+          [Unit]
+          Description=Prometheus Service
+          After=network.target
+
+          [Service]
+          User=root
+          ExecStart={{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64/prometheus --config.file={{ prometheus_install_dir }}/prometheus-{{ prometheus_version }}.linux-amd64/prometheus.yml
+          Restart=always
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Enable and start Prometheus service
+      ansible.builtin.systemd:
+        name: prometheus
+        enabled: yes
+        state: started
+
+
+# set up the Prometheus configuration file according to your requirements by HARSH NITIN TEMBHURNIKAR 21BPS1531
+
+#Replaced Grafana Agent installation with Prometheus installation.
+#Added tasks to download and extract Prometheus.
+#Created a Prometheus service file to run Prometheus as a service.
+#Defined configuration paths and ensured that Prometheus runs after the installation.
